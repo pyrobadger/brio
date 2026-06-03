@@ -1,65 +1,80 @@
-# Walkthrough - CRM Dashboard Cleanup, Widgets Overhaul, and Styling Refinement
+# Walkthrough - CRM Production Deployment & GitHub Push
 
-We have completed the full CRM dashboard refinement. All static dashboard-template placeholders have been removed and replaced with dynamic, database-backed components.
-
----
-
-## 🎨 Key Enhancements & Layout Updates
-
-### 1. Database-Backed KPI Stat Cards (Row 1)
-* **File modified**: [DashboardPage.tsx](file:///e:/Programing/crm-assignment/client/src/pages/DashboardPage.tsx)
-* **Details**:
-  * Replaced the mock stat cards (Conversion Rate, CLV, etc.) with four database-backed cards: **Total Leads**, **New Leads**, **Qualified Leads**, and **Converted Leads** (won).
-  * Metrics are fetched directly from the backend's stats endpoint.
-  * Clicking any card automatically filters the lead database below to match that status and scrolls the viewport down smoothly.
-
-### 2. Recent Leads Widget (Row 2, Right Panel)
-* **File modified**: [DashboardPage.tsx](file:///e:/Programing/crm-assignment/client/src/pages/DashboardPage.tsx)
-* **Details**:
-  * Removed the static **Calendar** widget.
-  * Introduced the **Recent Leads** widget showing the latest three leads added to the database.
-  * Clicking a recent lead immediately searches for and displays that lead in the main database table.
-
-### 3. Lead Status Breakdown Widget (Row 3, Right Panel)
-* **File modified**: [DashboardPage.tsx](file:///e:/Programing/crm-assignment/client/src/pages/DashboardPage.tsx)
-* **Details**:
-  * Replaced the mock **Top Customer Locations** map and list.
-  * Added a **Lead Status Breakdown** widget showing counts and percentages for all five CRM lead stages (`New`, `Contacted`, `Qualified`, `Converted`, `Lost`) backed directly by `stats.byStatus`.
-  * Clicking a status bar row filters the main database view instantly. Includes a "Clear Status Filter" button at the bottom.
-
-### 4. Layout Grid Balancing
-* **Details**:
-  * Row 2: Leads Acquisition Chart spans `lg:col-span-2` next to the 1/3-width Recent Leads panel.
-  * Row 3: Leads Management spans `lg:col-span-2` next to the 1/3-width Lead Status Breakdown card.
-
-### 5. Removed Template Leftovers
-* **Details**:
-  * **Top Header Actions**: Removed `Share`, `Imports`, `Exports`, and `Customize Widget` buttons.
-  * **Table Actions Bar**: Removed mock `Ask AI` and `Group` buttons.
-  * **Customer Acquisition Cost**: Deleted the entire collapsible CAC card (including the `History`, `Assign Task`, and `Adjust Spend` actions).
-  * **Sidebar**: Removed the mock Cloud Storage card, the **Favorites** group (Active Leads, High Value Deals), and the **Projects** group (Mesh Redesign) in the sidebar footer.
-
-### 6. Aligned Button Shape & Profile Info
-* **Files modified**: [DashboardPage.tsx](file:///e:/Programing/crm-assignment/client/src/pages/DashboardPage.tsx), [AppLayout.tsx](file:///e:/Programing/crm-assignment/client/src/components/layout/AppLayout.tsx)
-* **Details**:
-  * Adjusted `Filter`, `Sort`, and `Add New` action buttons from `rounded-xl` to `rounded-lg` so they are not too rounded and are styled consistently.
-  * Changed user profile card in the sidebar to "Aditya Patil" with initials "AP" and footer credit "made with ❤️ by Aditya".
+We have configured the project for production, committed the files, and successfully pushed the codebase to your GitHub repository at [pyrobadger/brio](https://github.com/pyrobadger/brio).
 
 ---
 
-## 🛠️ Verification & Compile Checks
+## 🎨 Production Configuration Files Added
 
-All layers compile cleanly without TS or ESLint issues.
+### 1. PM2 Process Manager Configuration (Droplet VM)
+* **File created**: [ecosystem.config.js](file:///e:/Programing/crm-assignment/server/ecosystem.config.js)
+* **Details**:
+  * Configured a PM2 ecosystem file defining the app name (`brio-backend`), target entrypoint (`dist/server.js`), and default production environment port (`3001`).
+  * On your VM, run the server using: `pm2 start ecosystem.config.js --env production`.
 
-| Check | Result | Command Run |
-|---|---|---|
-| Client TypeScript & Production Build | ✅ PASS | `cmd.exe /c "npm run build"` |
+### 2. Automated Prisma Generation on Build
+* **File modified**: [package.json](file:///e:/Programing/crm-assignment/server/package.json)
+* **Details**:
+  * Modified the build script: `"build": "prisma generate && tsc"`. This guarantees the Prisma client builds automatically during your VM deploy process.
+  * Added a database schema deployment script: `"db:deploy": "prisma db push"`.
+
+### 3. SPA Routing Configuration (Vercel)
+* **File created**: [vercel.json](file:///e:/Programing/crm-assignment/client/vercel.json)
+* **Details**:
+  * Added a routing rewrite fallback redirection to route all page requests back to `/index.html`. This prevents 404 errors when reloading inner paths (like `/leads/new`).
+
+### 4. Dynamic API Connection
+* **File modified**: [leadService.ts](file:///e:/Programing/crm-assignment/client/src/services/leadService.ts)
+* **Details**:
+  * Changed the Axios instance base URL to fetch `import.meta.env.VITE_API_URL || '/api'`. This lets you dynamically point your Vercel deployment to your droplet VM IP/domain.
 
 ---
 
-## 📸 Completed Layout Summary
+## 🚀 Steps to Deploy on Your DigitalOcean VM
 
-* **Row 1**: 4 Database KPI Stat Cards (`Total Leads`, `New Leads`, `Qualified Leads`, `Converted Leads`).
-* **Row 2**: Leads Acquisition Line Graph (2/3 width) + Recent Leads Database Panel (1/3 width).
-* **Row 3**: Leads Management Summary (2/3 width) + Lead Status Breakdown Widget (1/3 width).
-* **Row 4**: Leads Database Table with aligned `Filter`, `Sort`, and `Add New` actions.
+1. **Clone/Pull repository**:
+   ```bash
+   git clone https://github.com/pyrobadger/brio.git
+   cd brio/server
+   ```
+2. **Install and Build**:
+   ```bash
+   npm install
+   npm run build
+   ```
+3. **Environment Setup**:
+   Create a `.env` file in the `server` directory on your VM:
+   ```env
+   DATABASE_URL="postgresql://<username>:<password>@<host>:<port>/<dbname>?sslmode=require"
+   CORS_ORIGIN="https://<your-vercel-app-name>.vercel.app"
+   NODE_ENV="production"
+   PORT=3001
+   ```
+4. **Push database schema changes**:
+   ```bash
+   npx prisma db push
+   ```
+5. **Start with PM2**:
+   ```bash
+   pm2 start ecosystem.config.js --env production
+   pm2 save
+   ```
+
+---
+
+## ⚡ Steps to Deploy on Vercel
+
+1. **Import Repository**:
+   * Go to Vercel Console -> **Add New** -> **Project**.
+   * Import `pyrobadger/brio`.
+2. **Project Configuration**:
+   * **Framework Preset**: `Vite`
+   * **Root Directory**: `client`
+   * **Build Command**: `npm run build`
+   * **Output Directory**: `dist`
+3. **Environment Variables**:
+   * Add a new environment variable:
+     * **Name**: `VITE_API_URL`
+     * **Value**: `http://<your-droplet-ip-or-domain>:3001/api`
+4. **Deploy**:
+   * Click **Deploy**.
